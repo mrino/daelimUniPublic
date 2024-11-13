@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "instadaelim_typescript",
+    "slug": "instadaelim_typescript",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/pass_start.jpg",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.skh02450.instadaelim_typescript"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "이미지를 선택하기 위해서 권한을 허가해주세요."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4635db0e-b885-4048-ad3c-1e9c91feef35"
+      }
+    }
+  }
+}

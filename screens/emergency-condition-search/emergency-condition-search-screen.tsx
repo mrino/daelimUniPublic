@@ -87,7 +87,8 @@ const EmergencyConditionSearchScreen = () => {
         )}
       </MapV>
       {errorMsg && <Text style={{ color: "red" }}>{errorMsg}</Text>}
-      <BottomSheet />
+
+      <BottomSheet></BottomSheet>
     </SafeContainer>
   );
 };

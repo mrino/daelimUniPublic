@@ -1,18 +1,28 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigation } from "@react-navigation/native";
-import { TouchableOpacity, View, Text, SafeAreaView, TextInput, Alert } from "react-native";
+import {
+  TouchableOpacity,
+  View,
+  Text,
+  SafeAreaView,
+  TextInput,
+  Alert,
+  ScrollView,
+} from "react-native";
 import styled from "styled-components/native";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
+import axios from "axios";
 import { FontAwesome } from "@expo/vector-icons";
 
 const MainScreen = () => {
-  const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
+  const [location, setLocation] =
+    useState<Location.LocationObjectCoords | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showButtons, setShowButtons] = useState<boolean>(true);
   const [address, setAddress] = useState<string | null>(null);
-
+  const [hospitalData, setHospitalData] = useState<any[]>([]); // 병원 데이터 상태 추가
   const [mapRegion, setMapRegion] = useState({
     latitude: 37.5665,
     longitude: 126.978,
@@ -22,7 +32,6 @@ const MainScreen = () => {
 
   const navigation = useNavigation();
 
-  // 위치 권한 요청 및 초기 위치 설정
   const locationPermissions = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -31,46 +40,71 @@ const MainScreen = () => {
         return;
       }
       const userLocation = await Location.getCurrentPositionAsync({});
-      if (
-        userLocation.coords.latitude !== location?.latitude ||
-        userLocation.coords.longitude !== location?.longitude
-      ) {
-        setLocation(userLocation.coords);
-        setMapRegion({
-          latitude: userLocation.coords.latitude,
-          longitude: userLocation.coords.longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        });
-        fetchAddressFromCoords(userLocation.coords.latitude, userLocation.coords.longitude);
-      }
+      setLocation(userLocation.coords);
+      setMapRegion({
+        latitude: userLocation.coords.latitude,
+        longitude: userLocation.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+      fetchHospitalData(
+        userLocation.coords.latitude,
+        userLocation.coords.longitude
+      );
+      fetchAddressFromCoords(
+        userLocation.coords.latitude,
+        userLocation.coords.longitude
+      );
     } catch (error) {
-      setErrorMsg("Failed to get current location.");
+      setErrorMsg("현재 위치를 가져오는 데 실패했습니다.");
     }
   };
 
-  // 위도, 경도로부터 주소 정보 가져오기
-  const fetchAddressFromCoords = async (latitude: number, longitude: number) => {
+  // NOTE: 병원 데이터 가져오기 함수
+  const fetchHospitalData = async (latitude: number, longitude: number) => {
+    try {
+      const response = await axios.get(
+        "http://hospital-main-api.minq.work/getHospitalInfoList",
+        {
+          params: {
+            page: 1,
+            size: 20,
+            radius: 5000, // 5km 반경
+            latitude: latitude, // 추가된 위도
+            longitude: longitude, // 추가된 경도
+          },
+        }
+      );
+
+      console.log("응답 데이터:", response.data);
+
+      // NOTE: 병원 정보가 있는 경우 처리
+      const hospitals = response.data.data.content; // content에서 병원 정보를 가져옴
+      if (hospitals.length > 0) {
+        setHospitalData(hospitals);
+      } else {
+        Alert.alert("주변에 병원이 없습니다.");
+      }
+    } catch (error) {
+      console.error("Error fetching hospital data", error);
+      setErrorMsg("병원 데이터를 가져오는 중 오류가 발생했습니다.");
+    }
+  };
+
+  const fetchAddressFromCoords = async (
+    latitude: number,
+    longitude: number
+  ) => {
     try {
       const [result] = await Location.reverseGeocodeAsync({
         latitude,
         longitude,
       });
       if (result) {
-        // 필요한 필드 추출
         const { region, city, district, street, name } = result;
-
-        // 한글로 주소 문자열 구성
-        const fullAddress = [
-          region || "", // 시도
-          city || "", // 시군구
-          district || "", // 읍면동
-          street || "", // 상세주소
-          name || "", // 기타 이름
-        ]
+        const fullAddress = [region, city, district, street, name]
           .filter(Boolean)
-          .join(" "); // 비어있지 않은 값만 포함하여 조합
-
+          .join(" ");
         setAddress(fullAddress);
       } else {
         setAddress("주소를 찾을 수 없습니다.");
@@ -80,11 +114,6 @@ const MainScreen = () => {
     }
   };
 
-  useEffect(() => {
-    locationPermissions();
-  }, []);
-
-  // 검색 함수 (메모이제이션 처리)
   const handleSearch = useCallback(async () => {
     try {
       const results = await Location.geocodeAsync(searchQuery);
@@ -106,7 +135,6 @@ const MainScreen = () => {
     }
   }, [searchQuery]);
 
-  // 줌 인/아웃 핸들러
   const handleZoom = (factor: number) => {
     setMapRegion((prevRegion) => ({
       ...prevRegion,
@@ -114,6 +142,10 @@ const MainScreen = () => {
       longitudeDelta: prevRegion.longitudeDelta * factor,
     }));
   };
+
+  useEffect(() => {
+    locationPermissions();
+  }, []);
 
   return (
     <SafeContainer>
@@ -135,13 +167,36 @@ const MainScreen = () => {
               title="현재 위치"
             />
           )}
+          {hospitalData.map((hospital) => (
+            <Marker
+              key={hospital.hpid}
+              coordinate={{
+                latitude: hospital.wgs84Lat,
+                longitude: hospital.wgs84Lon,
+              }}
+              title={hospital.dutyName}
+              description={hospital.dutyAddr}
+              onPress={() =>
+                navigation.navigate("EmergencyRoomScreen", {
+                  hospital,
+                })
+              }
+            />
+          ))}
         </MapV>
+
+        {/* 병원 정보 리스트 출력 */}
+
         <SearchAddressContainer>
-          <SearchContainer>
-            <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} handleSearch={handleSearch} />
-          </SearchContainer>
+          <SearchBar
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            handleSearch={handleSearch}
+          />
           <AddressContainer>
-            <AddressText>{address ? `주소: ${address}` : "위치를 선택하세요"}</AddressText>
+            <AddressText>
+              {address ? `주소: ${address}` : "위치를 선택하세요"}
+            </AddressText>
             {errorMsg && <ErrorText>{errorMsg}</ErrorText>}
           </AddressContainer>
         </SearchAddressContainer>
@@ -159,16 +214,14 @@ const MainScreen = () => {
       <ButtonContainer show={showButtons}>
         {[
           { title: "응급실", screen: "EmergencyRoomScreen" },
-          { title: "응급처치", screen: "FirstAidScreen" },
-          { title: "즐겨찾기", screen: "BookmarkScreen" },
+          // { title: "응급처치", screen: "FirstAidScreen" },
+          // { title: "즐겨찾기", screen: "BookmarkScreen" },
           { title: "응급실조건검색", screen: "EmergencyConditionSearchScreen" },
-          { title: "상세페이지(테스트용)", screen: "TestScreen" },
-          { title: "테스트용", screen: "MyPage" },
-          { title: "EmergencyRoomList", screen: "EmergencyRoomList" },
+          // { title: "상세페이지(테스트용)", screen: "TestScreen" },
         ].map((button) => (
           <ActionButton
             key={button.screen}
-            onPress={() => navigation.navigate(button.screen)} // Add this line
+            onPress={() => navigation.navigate(button.screen)}
           >
             <ActionButtonText>{button.title}</ActionButtonText>
           </ActionButton>
@@ -176,23 +229,31 @@ const MainScreen = () => {
       </ButtonContainer>
 
       <ToggleButton onPress={() => setShowButtons(!showButtons)}>
-        <FontAwesome name={showButtons ? "chevron-down" : "chevron-up"} size={24} color="black" />
+        <FontAwesome
+          name={showButtons ? "chevron-down" : "chevron-up"}
+          size={24}
+          color="black"
+        />
       </ToggleButton>
     </SafeContainer>
   );
 };
 
-// SearchBar 컴포넌트를 분리하고 메모이제이션을 적용하여 불필요한 리렌더링 방지
-const SearchBar = React.memo(({ searchQuery, setSearchQuery, handleSearch }: any) => (
-  <SearchContainer>
-    <SearchInput placeholder="위치 검색" value={searchQuery} onChangeText={setSearchQuery} />
-    <SearchButton onPress={handleSearch}>
-      <SearchButtonText>검색</SearchButtonText>
-    </SearchButton>
-  </SearchContainer>
-));
+const SearchBar = React.memo(
+  ({ searchQuery, setSearchQuery, handleSearch }: any) => (
+    <SearchContainer>
+      <SearchInput
+        placeholder="위치 검색"
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+      />
+      <SearchButton onPress={handleSearch}>
+        <SearchButtonText>검색</SearchButtonText>
+      </SearchButton>
+    </SearchContainer>
+  )
+);
 
-// Styled components
 const SafeContainer = styled(SafeAreaView)`
   flex: 1;
   background-color: #f5f5f5;
@@ -251,52 +312,28 @@ const SearchContainer = styled(View)`
 `;
 
 const SearchInput = styled(TextInput)`
-  width: 95%;
-  height: 50px;
-  border-radius: 5px;
-  border: 1px solid #ccc;
+  flex: 1;
+  height: 40px;
+  border-width: 1px;
+  border-color: gray;
   padding: 10px;
-  background-color: white;
+  border-radius: 5px;
 `;
 
 const SearchButton = styled(TouchableOpacity)`
   background-color: #ff8520;
   padding: 10px;
   border-radius: 5px;
-  height: 45px;
-  left: 15;
+  margin-left: 10px;
 `;
 
 const SearchButtonText = styled(Text)`
   color: white;
-  text-align: center;
-`;
-
-const ZoomButtonContainer = styled(View)`
-  position: absolute;
-  right: 10px;
-  top: 190px;
-  flex-direction: column;
-  align-items: center;
-`;
-
-const ZoomButton = styled(TouchableOpacity)`
-  width: 50px;
-  height: 50px;
-  background-color: #ff8520;
-  border-radius: 25px;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 10px;
 `;
 
 const AddressContainer = styled(View)`
-  position: absolute;
-  left: 20px;
-  right: 20px;
-  background-color: white;
-  padding: 15px;
-  border-radius: 10px;
+  margin-top: 10px;
+  align-items: center;
 `;
 
 const AddressText = styled(Text)`
@@ -308,44 +345,50 @@ const ErrorText = styled(Text)`
   color: red;
 `;
 
-const ButtonContainer = styled(View)<{ show: boolean }>`
-  padding: 10px;
-  background-color: #f5f5f5;
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: space-between;
+const ZoomButtonContainer = styled(View)`
   position: absolute;
-  bottom: 40px;
-  left: 0;
-  right: 0;
-  display: ${(props) => (props.show ? "flex" : "none")};
+  top: 80px;
+  right: 10px;
+  flex-direction: column;
+`;
+
+const ZoomButton = styled(TouchableOpacity)`
+  background-color: #ffffff;
+  border-radius: 50px;
+  padding: 10px;
+  margin-bottom: 10px;
+`;
+
+const ButtonContainer = styled(View)<{ show: boolean }>`
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 60px;
+  background-color: #f5f5f5;
+  position: absolute;
+  bottom: 0;
+  padding: 10px;
+  display: ${({ show }) => (show ? "flex" : "none")};
 `;
 
 const ActionButton = styled(TouchableOpacity)`
-  width: 22%;
-  height: 80px;
-  margin-bottom: 10px;
   background-color: #ff8520;
-  border-radius: 10px;
-  align-items: center;
-  justify-content: center;
+  padding: 10px 20px;
+  border-radius: 5px;
 `;
 
 const ActionButtonText = styled(Text)`
-  font-size: 14px;
-  color: black;
-  font-weight: bold;
+  color: white;
 `;
 
 const ToggleButton = styled(TouchableOpacity)`
   position: absolute;
-  bottom: 10px;
+  bottom: 70px;
   right: 10px;
-  background-color: #ff8520;
-  padding: 10px;
+  background-color: #ffffff;
   border-radius: 50px;
-  align-items: center;
-  justify-content: center;
+  padding: 10px;
 `;
 
 export default MainScreen;

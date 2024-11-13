@@ -1,10 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { FlatList, Text, View, ActivityIndicator, Linking, Button, Image } from "react-native";
+import {
+  FlatList,
+  Text,
+  View,
+  ActivityIndicator,
+  Linking,
+  Button,
+  Image,
+  TouchableOpacity,
+} from "react-native";
 import axios from "axios";
 import Constants from "expo-constants";
 import styled from "styled-components";
+import { useNavigation } from "@react-navigation/native";
 
-const hApiUrl = Constants?.expoConfig?.extra?.HAPI_URL;
+const hApiUrl =
+  "http://hospital-main-api.minq.work/getEmergencyHospitalList?page=0&size=20";
 const ApiKey = Constants?.expoConfig?.extra?.API_KEY;
 
 // 데이터 인터페이스
@@ -39,9 +50,11 @@ const DutyTelBtn = styled(Button)`
 const fetchEmergencyRoomData = async (): Promise<EmergencyRoomData[]> => {
   try {
     // API 호출
-    const response = await axios.get<{ resultCode: number; message: string; data: { content: EmergencyRoomData[] } }>(
-      hApiUrl
-    );
+    const response = await axios.get<{
+      resultCode: number;
+      message: string;
+      data: { content: EmergencyRoomData[] };
+    }>(hApiUrl);
 
     // 응답 데이터가 존재하는지 확인하고 필터링
     if (response.data && response.data.data && response.data.data.content) {
@@ -90,6 +103,7 @@ const EmergencyRoomList = () => {
   const [data, setData] = useState<EmergencyRoomData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [images, setImages] = useState<{ [key: string]: string | null }>({});
+  const navigation = useNavigation();
 
   useEffect(() => {
     const loadData = async () => {
@@ -104,7 +118,10 @@ const EmergencyRoomList = () => {
 
       // 모든 이미지 데이터를 받아온 후 상태 업데이트
       const imageData = await Promise.all(imagePromises);
-      const imageMap = imageData.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+      const imageMap = imageData.reduce(
+        (acc, curr) => ({ ...acc, ...curr }),
+        {}
+      );
       setImages(imageMap);
 
       setLoading(false);
@@ -126,12 +143,26 @@ const EmergencyRoomList = () => {
         keyExtractor={(item, index) => index.toString()}
         renderItem={({ item }) => (
           <View style={{ marginBottom: 30 }}>
-            {images[item.dutyName] ? <DutyImg source={{ uri: images[item.dutyName] }} /> : <Text>이미지 없음</Text>}
+            {images[item.dutyName] ? (
+              <DutyImg source={{ uri: images[item.dutyName] }} />
+            ) : (
+              <Text>이미지 없음</Text>
+            )}
             <TextContainer>
               <DustName>{item.dutyName}</DustName>
               <DutyTel>{item.dutyTel3}</DutyTel>
             </TextContainer>
-            <DutyTelBtn title={"전화 걸기"} onPress={() => Linking.openURL(`tel:${item.dutyTel3}`)} />
+            <DutyTelBtn
+              title={"전화 걸기"}
+              onPress={() => Linking.openURL(`tel:${item.dutyTel3}`)}
+            />
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate("EmergencyRoomScreen", { hospital: item })
+              }
+            >
+              <Text>병원 세부 정보 보기</Text>
+            </TouchableOpacity>
           </View>
         )}
       />

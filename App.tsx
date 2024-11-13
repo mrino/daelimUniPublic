@@ -1,37 +1,30 @@
-import { StatusBar } from "expo-status-bar";
-import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
+import React from "react";
+import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-import MainStack from "./stack/MainStack";
-import { ThemeProvider, useTheme } from "./theme/Theme"; // 경로에 맞게 수정
-import { ThemeProvider as StyledThemeProvider } from "styled-components/native";
-import { useContext } from "react";
+import MainScreen from "./screens/main-screen";
+
+import EmergencyRoomScreen from "./screens/emergency-room/emergency-room-screen";
+
+import EmergencyConditionSearchScreen from "./screens/emergency-condition-search/emergency-condition-search-screen";
+
+const Stack = createStackNavigator();
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Main" component={MainScreen} />
+
+        <Stack.Screen
+          name="EmergencyRoomScreen"
+          component={EmergencyRoomScreen}
+        />
+
+        <Stack.Screen
+          name="EmergencyConditionSearchScreen"
+          component={EmergencyConditionSearchScreen}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
-
-const AppContent = () => {
-  const { isDark } = useTheme(); // 테마 상태 가져오기
-
-  const lightTheme = {
-    background: "#ffffff",
-    text: "#000000",
-  };
-
-  const darkTheme = {
-    background: "#000000",
-    text: "#ffffff",
-  };
-
-  return (
-    <StyledThemeProvider theme={isDark ? darkTheme : lightTheme}>
-      <NavigationContainer theme={isDark ? DarkTheme : DefaultTheme}>
-        <MainStack />
-      </NavigationContainer>
-    </StyledThemeProvider>
-  );
-};

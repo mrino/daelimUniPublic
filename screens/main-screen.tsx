@@ -1,14 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigation } from "@react-navigation/native";
-import {
-  TouchableOpacity,
-  View,
-  Text,
-  SafeAreaView,
-  TextInput,
-  Alert,
-  ScrollView,
-} from "react-native";
+import { TouchableOpacity, View, Text, SafeAreaView, TextInput, Alert, ScrollView } from "react-native";
 import styled from "styled-components/native";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
@@ -16,8 +8,7 @@ import axios from "axios";
 import { FontAwesome } from "@expo/vector-icons";
 
 const MainScreen = () => {
-  const [location, setLocation] =
-    useState<Location.LocationObjectCoords | null>(null);
+  const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showButtons, setShowButtons] = useState<boolean>(true);
@@ -47,14 +38,8 @@ const MainScreen = () => {
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       });
-      fetchHospitalData(
-        userLocation.coords.latitude,
-        userLocation.coords.longitude
-      );
-      fetchAddressFromCoords(
-        userLocation.coords.latitude,
-        userLocation.coords.longitude
-      );
+      fetchHospitalData(userLocation.coords.latitude, userLocation.coords.longitude);
+      fetchAddressFromCoords(userLocation.coords.latitude, userLocation.coords.longitude);
     } catch (error) {
       setErrorMsg("현재 위치를 가져오는 데 실패했습니다.");
     }
@@ -63,18 +48,15 @@ const MainScreen = () => {
   // NOTE: 병원 데이터 가져오기 함수
   const fetchHospitalData = async (latitude: number, longitude: number) => {
     try {
-      const response = await axios.get(
-        "http://hospital-main-api.minq.work/getHospitalInfoList",
-        {
-          params: {
-            page: 1,
-            size: 20,
-            radius: 5000, // 5km 반경
-            latitude: latitude, // 추가된 위도
-            longitude: longitude, // 추가된 경도
-          },
-        }
-      );
+      const response = await axios.get("http://hospital-main-api.minq.work/getHospitalInfoList", {
+        params: {
+          page: 1,
+          size: 20,
+          radius: 5000, // 5km 반경
+          latitude: latitude, // 추가된 위도
+          longitude: longitude, // 추가된 경도
+        },
+      });
 
       console.log("응답 데이터:", response.data);
 
@@ -91,10 +73,7 @@ const MainScreen = () => {
     }
   };
 
-  const fetchAddressFromCoords = async (
-    latitude: number,
-    longitude: number
-  ) => {
+  const fetchAddressFromCoords = async (latitude: number, longitude: number) => {
     try {
       const [result] = await Location.reverseGeocodeAsync({
         latitude,
@@ -102,9 +81,7 @@ const MainScreen = () => {
       });
       if (result) {
         const { region, city, district, street, name } = result;
-        const fullAddress = [region, city, district, street, name]
-          .filter(Boolean)
-          .join(" ");
+        const fullAddress = [region, city, district, street, name].filter(Boolean).join(" ");
         setAddress(fullAddress);
       } else {
         setAddress("주소를 찾을 수 없습니다.");
@@ -167,36 +144,37 @@ const MainScreen = () => {
               title="현재 위치"
             />
           )}
-          {hospitalData.map((hospital) => (
-            <Marker
-              key={hospital.hpid}
-              coordinate={{
-                latitude: hospital.wgs84Lat,
-                longitude: hospital.wgs84Lon,
-              }}
-              title={hospital.dutyName}
-              description={hospital.dutyAddr}
-              onPress={() =>
-                navigation.navigate("EmergencyRoomScreen", {
-                  hospital,
-                })
-              }
-            />
-          ))}
+          {hospitalData.map((hospital) => {
+            const value = hospital.hvec >= 10;
+            const imageSrc = value ? require("../assets/Below.png") : require("../assets/Over.png");
+            const size = value ? { width: 50, height: 50 } : { width: 30, height: 30 };
+
+            return (
+              <MarkerIcon
+                icon={imageSrc}
+                key={hospital.hpid}
+                coordinate={{
+                  latitude: hospital.wgs84Lat,
+                  longitude: hospital.wgs84Lon,
+                }}
+                title={hospital.dutyName}
+                description={hospital.dutyAddr}
+                onPress={() =>
+                  navigation.navigate("EmergencyRoomScreen", {
+                    hospital,
+                  })
+                }
+              ></MarkerIcon>
+            );
+          })}
         </MapV>
 
         {/* 병원 정보 리스트 출력 */}
 
         <SearchAddressContainer>
-          <SearchBar
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            handleSearch={handleSearch}
-          />
+          <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} handleSearch={handleSearch} />
           <AddressContainer>
-            <AddressText>
-              {address ? `주소: ${address}` : "위치를 선택하세요"}
-            </AddressText>
+            <AddressText>{address ? `주소: ${address}` : "위치를 선택하세요"}</AddressText>
             {errorMsg && <ErrorText>{errorMsg}</ErrorText>}
           </AddressContainer>
         </SearchAddressContainer>
@@ -219,40 +197,27 @@ const MainScreen = () => {
           { title: "응급실조건검색", screen: "EmergencyConditionSearchScreen" },
           // { title: "상세페이지(테스트용)", screen: "TestScreen" },
         ].map((button) => (
-          <ActionButton
-            key={button.screen}
-            onPress={() => navigation.navigate(button.screen)}
-          >
+          <ActionButton key={button.screen} onPress={() => navigation.navigate(button.screen)}>
             <ActionButtonText>{button.title}</ActionButtonText>
           </ActionButton>
         ))}
       </ButtonContainer>
 
       <ToggleButton onPress={() => setShowButtons(!showButtons)}>
-        <FontAwesome
-          name={showButtons ? "chevron-down" : "chevron-up"}
-          size={24}
-          color="black"
-        />
+        <FontAwesome name={showButtons ? "chevron-down" : "chevron-up"} size={24} color="black" />
       </ToggleButton>
     </SafeContainer>
   );
 };
 
-const SearchBar = React.memo(
-  ({ searchQuery, setSearchQuery, handleSearch }: any) => (
-    <SearchContainer>
-      <SearchInput
-        placeholder="위치 검색"
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
-      <SearchButton onPress={handleSearch}>
-        <SearchButtonText>검색</SearchButtonText>
-      </SearchButton>
-    </SearchContainer>
-  )
-);
+const SearchBar = React.memo(({ searchQuery, setSearchQuery, handleSearch }: any) => (
+  <SearchContainer>
+    <SearchInput placeholder="위치 검색" value={searchQuery} onChangeText={setSearchQuery} />
+    <SearchButton onPress={handleSearch}>
+      <SearchButtonText>검색</SearchButtonText>
+    </SearchButton>
+  </SearchContainer>
+));
 
 const SafeContainer = styled(SafeAreaView)`
   flex: 1;
@@ -291,8 +256,14 @@ const Container = styled(View)`
 `;
 
 const MapV = styled(MapView)`
+  flex: 1;
   width: 100%;
   height: 100%;
+`;
+
+const MarkerIcon = styled(Marker)`
+  width: 300;
+  height: 300;
 `;
 
 const SearchAddressContainer = styled(View)`

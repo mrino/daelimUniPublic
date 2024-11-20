@@ -1,21 +1,11 @@
 import React, { useEffect, useState } from "react";
-import {
-  FlatList,
-  Text,
-  View,
-  ActivityIndicator,
-  Linking,
-  Button,
-  Image,
-  TouchableOpacity,
-} from "react-native";
+import { FlatList, Text, View, ActivityIndicator, Linking, Button, Image, TouchableOpacity } from "react-native";
 import axios from "axios";
 import Constants from "expo-constants";
 import styled from "styled-components";
 import { useNavigation } from "@react-navigation/native";
 
-const hApiUrl =
-  "http://hospital-main-api.minq.work/getEmergencyHospitalList?page=0&size=20";
+const hApiUrl = "http://hospital-main-api.minq.work/getEmergencyHospitalList?page=0&size=20";
 const ApiKey = Constants?.expoConfig?.extra?.API_KEY;
 
 // 데이터 인터페이스
@@ -42,7 +32,7 @@ const DustName = styled(Text)`
 const DutyTel = styled(Text)`
   font-size: 14;
 `;
-const DutyTelBtn = styled(Button)`
+const DutyTelBtn = styled(TouchableOpacity)`
   font-size: 14;
 `;
 
@@ -118,10 +108,7 @@ const EmergencyRoomList = () => {
 
       // 모든 이미지 데이터를 받아온 후 상태 업데이트
       const imageData = await Promise.all(imagePromises);
-      const imageMap = imageData.reduce(
-        (acc, curr) => ({ ...acc, ...curr }),
-        {}
-      );
+      const imageMap = imageData.reduce((acc, curr) => ({ ...acc, ...curr }), {});
       setImages(imageMap);
 
       setLoading(false);
@@ -143,24 +130,14 @@ const EmergencyRoomList = () => {
         keyExtractor={(item, index) => index.toString()}
         renderItem={({ item }) => (
           <View style={{ marginBottom: 30 }}>
-            {images[item.dutyName] ? (
-              <DutyImg source={{ uri: images[item.dutyName] }} />
-            ) : (
-              <Text>이미지 없음</Text>
-            )}
+            {images[item.dutyName] ? <DutyImg source={{ uri: images[item.dutyName] }} /> : <Text>이미지 없음</Text>}
             <TextContainer>
               <DustName>{item.dutyName}</DustName>
-              <DutyTel>{item.dutyTel3}</DutyTel>
+              <DutyTelBtn onPress={() => Linking.openURL(`tel:${item.dutyTel3}`)}>
+                <DutyTel>{item.dutyTel3}</DutyTel>
+              </DutyTelBtn>
             </TextContainer>
-            <DutyTelBtn
-              title={"전화 걸기"}
-              onPress={() => Linking.openURL(`tel:${item.dutyTel3}`)}
-            />
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate("EmergencyRoomScreen", { hospital: item })
-              }
-            >
+            <TouchableOpacity onPress={() => navigation.navigate("EmergencyRoomScreen", { hospital: item })}>
               <Text>병원 세부 정보 보기</Text>
             </TouchableOpacity>
           </View>

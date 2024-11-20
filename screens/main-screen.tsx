@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigation } from "@react-navigation/native";
-import { TouchableOpacity, View, Text, SafeAreaView, TextInput, Alert, ScrollView } from "react-native";
+import { TouchableOpacity, View, Text, SafeAreaView, TextInput, Alert, ScrollView, Image } from "react-native";
 import styled from "styled-components/native";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
@@ -147,11 +147,11 @@ const MainScreen = () => {
           {hospitalData.map((hospital) => {
             const value = hospital.hvec >= 10;
             const imageSrc = value ? require("../assets/Below.png") : require("../assets/Over.png");
-            const size = value ? { width: 50, height: 50 } : { width: 30, height: 30 };
+            const size = value ? { width: 30, height: 30 } : { width: 50, height: 50 };
 
             return (
-              <MarkerIcon
-                icon={imageSrc}
+              <Marker
+                tracksViewChanges={false}
                 key={hospital.hpid}
                 coordinate={{
                   latitude: hospital.wgs84Lat,
@@ -164,7 +164,11 @@ const MainScreen = () => {
                     hospital,
                   })
                 }
-              ></MarkerIcon>
+              >
+                <View style={size}>
+                  <MarkerIcon source={imageSrc} resizeMode="contain" />
+                </View>
+              </Marker>
             );
           })}
         </MapV>
@@ -261,9 +265,9 @@ const MapV = styled(MapView)`
   height: 100%;
 `;
 
-const MarkerIcon = styled(Marker)`
-  width: 300;
-  height: 300;
+const MarkerIcon = styled(Image)`
+  width: 100%;
+  height: 100%;
 `;
 
 const SearchAddressContainer = styled(View)`

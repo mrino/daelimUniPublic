@@ -7,8 +7,10 @@ import {
   Animated,
   Dimensions,
   TouchableOpacity,
+  ScrollView,
 } from "react-native";
 import styled from "styled-components";
+import EmergencyRoomList from "../emergencyList/EmergencyList";
 
 interface BottomSheetProps {
   onClose?: () => void;
@@ -87,6 +89,13 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ onClose }) => {
     right: 0;
   `;
 
+  const Container = styled(View)`
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+    margin-top: 10%;
+  `;
+
   return (
     <Animated.View
       style={[styles.bottomSheet, { transform: [{ translateY }] }]}
@@ -99,13 +108,19 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ onClose }) => {
 
       {/* BottomSheet의 내용 */}
       <View style={styles.content}>
-        <Text>Bottom Sheet Content</Text>
         <ButtonContainer>
           <ActionButton></ActionButton>
           <ActionButton></ActionButton>
           <ActionButton></ActionButton>
         </ButtonContainer>
+        <Container>
+          <EmergencyRoomList />
+        </Container>
       </View>
+
+      <Container>
+        <EmergencyRoomList />
+      </Container>
     </Animated.View>
   );
 };

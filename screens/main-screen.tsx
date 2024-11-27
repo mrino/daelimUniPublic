@@ -1,6 +1,13 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigation } from "@react-navigation/native";
-import { TouchableOpacity, View, Text, SafeAreaView, TextInput, Alert, ScrollView, Image } from "react-native";
+import {
+  TouchableOpacity,
+  View,
+  Text,
+  SafeAreaView,
+  TextInput,
+  Alert,
+} from "react-native";
 import styled from "styled-components/native";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
@@ -8,9 +15,10 @@ import axios from "axios";
 import { FontAwesome } from "@expo/vector-icons";
 
 const MainScreen = () => {
-  const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
+  const [location, setLocation] =
+    useState<Location.LocationObjectCoords | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [showButtons, setShowButtons] = useState<boolean>(true);
   const [address, setAddress] = useState<string | null>(null);
   const [hospitalData, setHospitalData] = useState<any[]>([]); // 병원 데이터 상태 추가
@@ -38,8 +46,14 @@ const MainScreen = () => {
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       });
-      fetchHospitalData(userLocation.coords.latitude, userLocation.coords.longitude);
-      fetchAddressFromCoords(userLocation.coords.latitude, userLocation.coords.longitude);
+      fetchHospitalData(
+        userLocation.coords.latitude,
+        userLocation.coords.longitude
+      );
+      fetchAddressFromCoords(
+        userLocation.coords.latitude,
+        userLocation.coords.longitude
+      );
     } catch (error) {
       setErrorMsg("현재 위치를 가져오는 데 실패했습니다.");
     }
@@ -48,15 +62,18 @@ const MainScreen = () => {
   // NOTE: 병원 데이터 가져오기 함수
   const fetchHospitalData = async (latitude: number, longitude: number) => {
     try {
-      const response = await axios.get("http://hospital-main-api.minq.work/getHospitalInfoList", {
-        params: {
-          page: 1,
-          size: 20,
-          radius: 5000, // 5km 반경
-          latitude: latitude, // 추가된 위도
-          longitude: longitude, // 추가된 경도
-        },
-      });
+      const response = await axios.get(
+        "http://hospital-main-api.minq.work/getHospitalInfoList",
+        {
+          params: {
+            page: 1,
+            size: 20,
+            radius: 5000, // 5km 반경
+            latitude: latitude, // 추가된 위도
+            longitude: longitude, // 추가된 경도
+          },
+        }
+      );
 
       console.log("응답 데이터:", response.data);
 
@@ -73,7 +90,10 @@ const MainScreen = () => {
     }
   };
 
-  const fetchAddressFromCoords = async (latitude: number, longitude: number) => {
+  const fetchAddressFromCoords = async (
+    latitude: number,
+    longitude: number
+  ) => {
     try {
       const [result] = await Location.reverseGeocodeAsync({
         latitude,
@@ -81,7 +101,9 @@ const MainScreen = () => {
       });
       if (result) {
         const { region, city, district, street, name } = result;
-        const fullAddress = [region, city, district, street, name].filter(Boolean).join(" ");
+        const fullAddress = [region, city, district, street, name]
+          .filter(Boolean)
+          .join(" ");
         setAddress(fullAddress);
       } else {
         setAddress("주소를 찾을 수 없습니다.");
@@ -126,12 +148,7 @@ const MainScreen = () => {
 
   return (
     <SafeContainer>
-      <Header>
-        <MenuButton onPress={() => setShowButtons(!showButtons)}>
-          <FontAwesome name="bars" size={24} color="black" />
-        </MenuButton>
-        <HeaderText>의료 앱</HeaderText>
-      </Header>
+      <Header />
 
       <Container>
         <MapV region={mapRegion} showsUserLocation={true}>
@@ -144,42 +161,52 @@ const MainScreen = () => {
               title="현재 위치"
             />
           )}
-          {hospitalData.map((hospital) => {
-            const value = hospital.hvec >= 10;
-            const imageSrc = value ? require("../assets/Below.png") : require("../assets/Over.png");
-            const size = value ? { width: 30, height: 30 } : { width: 50, height: 50 };
-
-            return (
-              <Marker
-                tracksViewChanges={false}
-                key={hospital.hpid}
-                coordinate={{
-                  latitude: hospital.wgs84Lat,
-                  longitude: hospital.wgs84Lon,
-                }}
-                title={hospital.dutyName}
-                description={hospital.dutyAddr}
-                onPress={() =>
-                  navigation.navigate("EmergencyRoomScreen", {
-                    hospital,
-                  })
-                }
-              >
-                <View style={size}>
-                  <MarkerIcon source={imageSrc} resizeMode="contain" />
-                </View>
-              </Marker>
-            );
-          })}
+          {hospitalData.map((hospital) => (
+            <Marker
+              key={hospital.hpid}
+              coordinate={{
+                latitude: hospital.wgs84Lat,
+                longitude: hospital.wgs84Lon,
+              }}
+              title={hospital.dutyName}
+              description={hospital.dutyAddr}
+              onPress={() =>
+                navigation.navigate("EmergencyRoomScreen", {
+                  hospital,
+                })
+              }
+            />
+          ))}
         </MapV>
 
         {/* 병원 정보 리스트 출력 */}
 
         <SearchAddressContainer>
-          <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} handleSearch={handleSearch} />
+          <SearchBar>
+            <SearchImageBackground
+              source={require("../assets/search-bar.png")}
+              resizeMode="stretch"
+            >
+              <SearchInputWrapper>
+                <SearchIcon source={require("../assets/search-icon.png")} />
+                <SearchInput
+                  placeholder="위치 검색"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+              </SearchInputWrapper>
+              <TouchableOpacity onPress={handleSearch}>
+                <GearIcon source={require("../assets/gear-icon.png")} />
+              </TouchableOpacity>
+            </SearchImageBackground>
+          </SearchBar>
           <AddressContainer>
-            <AddressText>{address ? `주소: ${address}` : "위치를 선택하세요"}</AddressText>
-            {errorMsg && <ErrorText>{errorMsg}</ErrorText>}
+            <AddressSizedBox>
+              <AddressText>
+                {address ? `주소: ${address}` : "위치를 선택하세요"}
+              </AddressText>
+              {errorMsg && <ErrorText>{errorMsg}</ErrorText>}
+            </AddressSizedBox>
           </AddressContainer>
         </SearchAddressContainer>
 
@@ -196,32 +223,48 @@ const MainScreen = () => {
       <ButtonContainer show={showButtons}>
         {[
           { title: "응급실", screen: "EmergencyRoomScreen" },
-          // { title: "응급처치", screen: "FirstAidScreen" },
-          // { title: "즐겨찾기", screen: "BookmarkScreen" },
           { title: "응급실조건검색", screen: "EmergencyConditionSearchScreen" },
-          // { title: "상세페이지(테스트용)", screen: "TestScreen" },
         ].map((button) => (
-          <ActionButton key={button.screen} onPress={() => navigation.navigate(button.screen)}>
+          <ActionButton
+            key={button.screen}
+            onPress={() => navigation.navigate(button.screen)}
+          >
             <ActionButtonText>{button.title}</ActionButtonText>
           </ActionButton>
         ))}
       </ButtonContainer>
 
       <ToggleButton onPress={() => setShowButtons(!showButtons)}>
-        <FontAwesome name={showButtons ? "chevron-down" : "chevron-up"} size={24} color="black" />
+        <FontAwesome
+          name={showButtons ? "chevron-down" : "chevron-up"}
+          size={24}
+          color="black"
+        />
       </ToggleButton>
     </SafeContainer>
   );
 };
 
-const SearchBar = React.memo(({ searchQuery, setSearchQuery, handleSearch }: any) => (
-  <SearchContainer>
-    <SearchInput placeholder="위치 검색" value={searchQuery} onChangeText={setSearchQuery} />
-    <SearchButton onPress={handleSearch}>
-      <SearchButtonText>검색</SearchButtonText>
-    </SearchButton>
-  </SearchContainer>
-));
+const SearchBar = styled(View)`
+  width: 100%;
+  align-items: center;
+  margin-top: 20px;
+`;
+
+const SearchImageBackground = styled.ImageBackground`
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 60px;
+  padding: 0 15px;
+`;
+
+const SearchInput = styled(TextInput)`
+  flex: 1;
+  height: 40px;
+  color: black;
+`;
 
 const SafeContainer = styled(SafeAreaView)`
   flex: 1;
@@ -231,26 +274,17 @@ const SafeContainer = styled(SafeAreaView)`
 
 const Header = styled(View)`
   width: 100%;
-  padding: 20px;
-  background-color: #ff8520;
+  padding: 10px;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
 `;
 
-const HeaderText = styled(Text)`
-  color: black;
-  font-size: 24px;
-  font-weight: bold;
-  flex: 1;
-  text-align: center;
-`;
-
-const MenuButton = styled(TouchableOpacity)`
-  width: 50px;
-  height: 50px;
+const AddressSizedBox = styled(View)`
+  width: 100%;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
 `;
 
 const Container = styled(View)`
@@ -260,12 +294,6 @@ const Container = styled(View)`
 `;
 
 const MapV = styled(MapView)`
-  flex: 1;
-  width: 100%;
-  height: 100%;
-`;
-
-const MarkerIcon = styled(Image)`
   width: 100%;
   height: 100%;
 `;
@@ -273,42 +301,33 @@ const MarkerIcon = styled(Image)`
 const SearchAddressContainer = styled(View)`
   align-items: center;
   width: 100%;
-  height: 130px;
+  height: 180px;
   position: absolute;
   top: 10;
-`;
-
-const SearchContainer = styled(View)`
-  flex-direction: row;
-  align-items: center;
-  width: 90%;
-  position: absolute;
-  top: 30px;
-`;
-
-const SearchInput = styled(TextInput)`
-  flex: 1;
-  height: 40px;
-  border-width: 1px;
-  border-color: gray;
-  padding: 10px;
-  border-radius: 5px;
-`;
-
-const SearchButton = styled(TouchableOpacity)`
-  background-color: #ff8520;
-  padding: 10px;
-  border-radius: 5px;
-  margin-left: 10px;
-`;
-
-const SearchButtonText = styled(Text)`
-  color: white;
 `;
 
 const AddressContainer = styled(View)`
   margin-top: 10px;
   align-items: center;
+`;
+
+const SearchInputWrapper = styled(View)`
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+`;
+
+const SearchIcon = styled.Image`
+  width: 20px;
+  height: 20px;
+  margin-left: 10px;
+  margin-right: 10px;
+`;
+
+const GearIcon = styled.Image`
+  width: 30px;
+  height: 30px;
+  margin-right: 40px;
 `;
 
 const AddressText = styled(Text)`

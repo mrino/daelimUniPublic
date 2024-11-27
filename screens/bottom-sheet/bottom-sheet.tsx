@@ -1,156 +1,152 @@
-import React, { useRef, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  PanResponder,
-  Animated,
-  Dimensions,
-  TouchableOpacity,
-  ScrollView,
-} from "react-native";
-import styled from "styled-components";
-import EmergencyRoomList from "../emergencyList/EmergencyList";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
+import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import FilterButton from "./FilterButton"; // 필터 버튼 컴포넌트
+import EmergencyRoomList from "../emergencyList/EmergencyList"; // 긴급실 목록
 
-interface BottomSheetProps {
-  onClose?: () => void;
+// 필터 항목 타입 정의
+interface Filter {
+  iconName: string;
+  id: number;
+  name: string;
 }
 
-const BottomSheet: React.FC<BottomSheetProps> = ({ onClose }) => {
-  const windowHeight = Dimensions.get("window").height;
-  const HEADER_HEIGHT = 50;
-  const HALF_POSITION = windowHeight / 2; // 화면 절반 높이
-  const translateY = useRef(
-    new Animated.Value(windowHeight - HEADER_HEIGHT)
-  ).current;
-  const [isHalfOpen, setIsHalfOpen] = useState(false);
+interface BottomSheetComponentProps {
+  setSelectedFilters: React.Dispatch<React.SetStateAction<string[]>>; // 부모에서 받은 필터 선택 함수
+}
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) =>
-        Math.abs(gestureState.dy) > 10,
-      onPanResponderMove: (_, gestureState) => {
-        const newTranslateY = Math.max(
-          HALF_POSITION,
-          gestureState.dy + windowHeight - HEADER_HEIGHT
-        );
-        translateY.setValue(newTranslateY);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 100) {
-          Animated.spring(translateY, {
-            toValue: windowHeight - HEADER_HEIGHT, // 헤더만 보이게
-            useNativeDriver: true,
-          }).start(() => setIsHalfOpen(false));
-        } else {
-          Animated.spring(translateY, {
-            toValue: HALF_POSITION, // 절반 위치로 올리기
-            useNativeDriver: true,
-          }).start(() => setIsHalfOpen(true));
-        }
-      },
-    })
-  ).current;
+const categories = [
+  "내과",
+  "소아과",
+  "피부과",
+  "이비인후과",
+  "정형외과",
+  "외과",
+  "가정의학과",
+  "신경외과",
+  "마취통증과",
+  "성형외과",
+  "산부인과",
+  "안과",
+  "정신의학과",
+  "흉부외과",
+  "치과",
+];
 
-  const toggleBottomSheet = () => {
-    if (isHalfOpen) {
-      // 현재 절반 위치에 있으므로, 원래 위치로 내리기
-      Animated.spring(translateY, {
-        toValue: windowHeight - HEADER_HEIGHT,
-        useNativeDriver: true,
-      }).start(() => setIsHalfOpen(false));
-    } else {
-      // 현재 원래 위치에 있으므로, 절반 위치로 올리기
-      Animated.spring(translateY, {
-        toValue: HALF_POSITION,
-        useNativeDriver: true,
-      }).start(() => setIsHalfOpen(true));
-    }
+const nightOrHolidayOptions = ["야간진료", "24시간진료", "토요일진료", "일요일진료", "공휴일진료"];
+
+const BottomSheetComponent: React.FC<BottomSheetComponentProps> = ({ setSelectedFilters }) => {
+  const [selectedCategoryFilters, setSelectedCategoryFilters] = useState<string[]>([]);
+  const [selectedNightFilters, setSelectedNightFilters] = useState<string[]>([]);
+  const [showCategoryFilters, setShowCategoryFilters] = useState(false); // 진료과목 필터 보이기/숨기기
+  const [showNightFilters, setShowNightFilters] = useState(false); // 야간/휴일 필터 보이기/숨기기
+
+  // 진료과목 필터 핸들러
+  const handleCategoryFilter = (category: string) => {
+    setSelectedCategoryFilters((prevFilters) =>
+      prevFilters.includes(category) ? prevFilters.filter((item) => item !== category) : [...prevFilters, category]
+    );
   };
 
-  const ActionButton = styled(TouchableOpacity)`
-    width: 30%;
-    height: 60px;
-    margin-bottom: 10px;
-    background-color: #ff8520;
-    border-radius: 10px;
-    align-items: center;
-    justify-content: center;
-  `;
+  // 야간/휴일 필터 핸들러
+  const handleNightFilter = (nightOption: string) => {
+    setSelectedNightFilters((prevFilters) =>
+      prevFilters.includes(nightOption)
+        ? prevFilters.filter((item) => item !== nightOption)
+        : [...prevFilters, nightOption]
+    );
+  };
 
-  const ButtonContainer = styled(View)`
-    padding: 10px;
-    background-color: #f5f5f5;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    position: absolute;
-    left: 0;
-    right: 0;
-  `;
-
-  const Container = styled(View)`
-    flex: 1;
-    justify-content: center;
-    align-items: center;
-    margin-top: 10%;
-  `;
+  // 부모 컴포넌트로 선택된 필터 전달
+  useEffect(() => {
+    const combinedFilters = [...selectedCategoryFilters, ...selectedNightFilters];
+    setSelectedFilters(combinedFilters);
+  }, [selectedCategoryFilters, selectedNightFilters, setSelectedFilters]);
 
   return (
-    <Animated.View
-      style={[styles.bottomSheet, { transform: [{ translateY }] }]}
-      {...panResponder.panHandlers}
-    >
-      {/* 클릭하여 BottomSheet를 토글하는 머리 부분 */}
-      <TouchableOpacity style={styles.header} onPress={toggleBottomSheet}>
-        <Text style={styles.headerText}>목록보기</Text>
-      </TouchableOpacity>
+    <BottomSheet index={0} snapPoints={["100%"]} animateOnMount={true} handleIndicatorStyle={styles.handleIndicator}>
+      <BottomSheetView style={styles.content}>
+        {/* 전체 내용을 스크롤 가능하게 ScrollView로 감싸기 */}
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled" // 키보드가 있을 때 터치 이벤트 처리
+          style={styles.scrollView} // scrollView 스타일 추가
+        >
+          {/* 진료과목 필터 */}
+          <TouchableOpacity onPress={() => setShowCategoryFilters((prev) => !prev)}>
+            <Text style={styles.sectionTitle}>진료과목</Text>
+          </TouchableOpacity>
+          {showCategoryFilters && (
+            <View style={styles.filterButtons}>
+              {categories.map((category) => (
+                <FilterButton
+                  key={category}
+                  label={category}
+                  onPress={() => handleCategoryFilter(category)}
+                  selected={selectedCategoryFilters.includes(category)}
+                  iconName="medical-services"
+                />
+              ))}
+            </View>
+          )}
 
-      {/* BottomSheet의 내용 */}
-      <View style={styles.content}>
-        <ButtonContainer>
-          <ActionButton></ActionButton>
-          <ActionButton></ActionButton>
-          <ActionButton></ActionButton>
-        </ButtonContainer>
-        <Container>
+          {/* 야간/휴일 필터 */}
+          <TouchableOpacity onPress={() => setShowNightFilters((prev) => !prev)}>
+            <Text style={styles.sectionTitle}>야간/휴일</Text>
+          </TouchableOpacity>
+          {showNightFilters && (
+            <View style={styles.filterButtons}>
+              {nightOrHolidayOptions.map((option) => (
+                <FilterButton
+                  key={option}
+                  label={option}
+                  onPress={() => handleNightFilter(option)}
+                  selected={selectedNightFilters.includes(option)}
+                  iconName="access-time"
+                />
+              ))}
+            </View>
+          )}
+
+          {/* 스크롤 가능한 병원 목록 */}
           <EmergencyRoomList />
-        </Container>
-      </View>
-
-      <Container>
-        <EmergencyRoomList />
-      </Container>
-    </Animated.View>
+        </ScrollView>
+      </BottomSheetView>
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  bottomSheet: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: Dimensions.get("window").height,
-    backgroundColor: "white",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    elevation: 5,
-  },
-  header: {
-    height: 50,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#ccc",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  headerText: {
-    fontSize: 16,
-    color: "#555",
-  },
   content: {
+    flex: 1,
     padding: 16,
+  },
+  handleIndicator: {
+    backgroundColor: "#ccc",
+    width: 50,
+    height: 5,
+    borderRadius: 2.5,
+    alignSelf: "center",
+    marginVertical: 10,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: "#007bff", // 클릭 가능한 텍스트 스타일링
+  },
+  filterButtons: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+  },
+  scrollView: {
+    height: "100%", // 스크롤 뷰에 전체 높이 적용
   },
 });
 
-export default BottomSheet;
+export default BottomSheetComponent;
